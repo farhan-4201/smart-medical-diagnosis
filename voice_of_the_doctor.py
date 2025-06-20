@@ -24,7 +24,7 @@ text_to_speech_with_gtts_old(input_text=input_text, output_filepath="gtts_testin
 import elevenlabs
 from elevenlabs.client import ElevenLabs
 
-ELEVENLABS_API_KEY=os.environ.get("ELEVENLABS_API_KEY")
+ELEVENLABS_API_KEY=os.environ.get("ELEVEN_API_KEY")
 
 def text_to_speech_with_elevenlabs_old(input_text, output_filepath):
     client=ElevenLabs(api_key=ELEVENLABS_API_KEY)
