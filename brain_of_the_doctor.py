@@ -1,11 +1,15 @@
-# if you dont use pipenv uncomment the following:
-# from dotenv import load_dotenv
-# load_dotenv()
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 #Step1: Setup GROQ API key
 import os
 
 GROQ_API_KEY=os.environ.get("GROQ_API_KEY")
+
+# Check if API key is loaded
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY not found in environment variables. Please add it to your .env file.")
 
 #Step2: Convert image to required format
 import base64
