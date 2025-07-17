@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - AI-Powered Medical Diagnosis</title>
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Get instant AI-powered medical diagnosis from skin images. Fast, private, and accurate analysis with voice support.">
+    <meta name="keywords" content="AI doctor, medical diagnosis, skin analysis, healthcare AI, telemedicine">
+    <meta name="author" content="AI Doctor Team">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="AI Doctor - Instant Medical Diagnosis">
+    <meta property="og:description" content="Upload a skin image and get instant AI-powered medical insights">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/>
+                        </svg>
+                    </div>
+                    {{ app_name }}
+                </a>
+                
+                <nav class="flex items-center gap-4">
+                    <a href="/health" class="text-gray-600 hover:text-blue-600 transition-colors">Health Check</a>
+                    <a href="#about" class="text-gray-600 hover:text-blue-600 transition-colors">About</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Hero Section -->
+            <section class="hero-section">
+                <h1 class="hero-title">AI-Powered Medical Diagnosis</h1>
+                <p class="hero-subtitle">
+                    Upload a skin image and describe your symptoms to get instant, AI-powered medical insights and recommendations.
+                </p>
+            </section>
+
+            <!-- Alert Container -->
+            <div id="alertContainer" class="mb-4"></div>
+
+            <!-- Diagnosis Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-0">Start Your Diagnosis</h2>
+                    <p class="text-gray-600 mt-2">Upload a clear image of the affected area and optionally record your symptoms</p>
+                </div>
+                
+                <form id="diagnosisForm" class="card-body">
+                    <!-- Image Upload Section -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path>
+                            </svg>
+                            Medical Image *
+                        </label>
+                        
+                        <div id="uploadArea" class="upload-area">
+                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"></path>
+                            </svg>
+                            <div id="uploadText">
+                                <p class="upload-text">Drag & drop your image here</p>
+                                <p class="upload-subtext">or click to browse files</p>
+                                <p class="upload-subtext mt-2">Supported: JPEG, PNG, WebP (max 5MB)</p>
+                            </div>
+                        </div>
+                        
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreview" class="hidden mt-4 text-center"></div>
+                    </div>
+
+                    <!-- Symptoms Input -->
+                    <div class="form-group">
+                        <label for="symptoms" class="form-label">
+                            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+                            </svg>
+                            Describe Your Symptoms (Optional)
+                        </label>
+                        <textarea 
+                            id="symptoms" 
+                            class="form-textarea" 
+                            rows="4" 
+                            placeholder="Describe any pain, itching, duration, or other symptoms you're experiencing..."
+                        ></textarea>
+                    </div>
+
+                    <!-- Audio Recording Section -->
+                    <div class="audio-controls">
+                        <h4>
+                            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                            </svg>
+                            Voice Recording (Optional)
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-3">Record your symptoms for more accurate analysis</p>
+                        
+                        <div class="flex items-center gap-3 mb-3">
+                            <button type="button" id="recordBtn" class="btn btn-secondary btn-sm">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                                </svg>
+                                Start Recording
+                            </button>
+                            
+                            <button type="button" id="stopBtn" class="btn btn-danger btn-sm hidden">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                                </svg>
+                                Stop Recording
+                            </button>
+                            
+                            <div id="recordingIndicator" class="recording-indicator hidden">
+                                <div class="recording-dot"></div>
+                                <span>Recording... (max 30s)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Audio Preview -->
+                        <div id="audioPreview" class="hidden"></div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="text-center">
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Get Diagnosis
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="hidden text-center my-8">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span class="ml-2 text-lg font-medium text-blue-600">Analyzing your image...</span>
+                </div>
+                <p class="text-gray-500 mt-2">This may take a few moments</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden results-section">
+                <!-- Results will be populated by JavaScript -->
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="disclaimer">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h4 class="font-semibold mb-1">Medical Disclaimer</h4>
+                        <p class="text-sm">
+                            This AI diagnosis tool is for educational and informational purposes only. 
+                            It does not replace professional medical advice, diagnosis, or treatment. 
+                            Always consult with a qualified healthcare provider for serious medical concerns.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 {{ app_name }}. All rights reserved.</p>
+                <p class="text-sm mt-2">Powered by advanced AI technology for medical assistance</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

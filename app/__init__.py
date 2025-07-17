@@ -1,0 +1,3 @@
+"""
+AI Doctor Application Package
+"""

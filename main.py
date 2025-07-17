@@ -1,65 +1,155 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
-import uvicorn
+"""
+AI Doctor - Main FastAPI Application
+Enhanced with proper structure and modern UI
+"""
 import os
-from brain_of_the_doctor import encode_image, analyze_image_with_query
-from voice_of_the_doctor import text_to_speech_with_gtts
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import HTMLResponse
 
-app = FastAPI()
+# Import application modules
+from app.core.config import settings
+from app.core.exceptions import create_http_exception
+from app.api.health import router as health_router
+from app.api.diagnosis import router as diagnosis_router
+from app.services.file_service import file_service
+from app.services.audio_service import audio_service
 
-# Allow CORS for local development (adjust origins as needed)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events"""
+    # Startup
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    
+    # Create necessary directories
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    os.makedirs("app/static/images", exist_ok=True)
+    
+    # Cleanup old files on startup
+    file_service.cleanup_old_files()
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down AI Doctor application")
+    audio_service.cleanup_temp_files()
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="AI-powered medical diagnosis from skin images with voice support",
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    lifespan=lifespan
+)
+
+# Add middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"message": "AI Doctor FastAPI backend is running."}
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-@app.post("/predict/")
-async def predict(file: UploadFile = File(...)):
-    # Save uploaded file to disk
-    file_location = f"temp_{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
-    # Run AI analysis
-    try:
-        encoded = encode_image(file_location)
-        # Use the same prompt and model as in gradio_app.py
-        system_prompt = ("You have to act as a professional doctor, I know you are not but this is for learning purpose. "
-            "What's in this image? Do you find anything wrong with it medically? "
-            "If you make a differential, suggest some remedies for them. Do not add any numbers or special characters in "
-            "your response. Your response should be in one long paragraph. Also always answer as if you are answering to a real person. "
-            "Do not say 'In the image I see' but say 'With what I see, I think you have ....' "
-            "Don't respond as an AI model in markdown, your answer should mimic that of an actual doctor not an AI bot. "
-            "Keep your answer concise (max 2 sentences). No preamble, start your answer right away please.")
-        result = analyze_image_with_query(
-            query=system_prompt,
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            encoded_image=encoded
-        )
-        # Generate audio response
-        audio_path = f"doctor_response_{file.filename}.mp3"
-        text_to_speech_with_gtts(result, audio_path)
-        with open(audio_path, "rb") as audio_file:
-            audio_bytes = audio_file.read()
-        os.remove(audio_path)
-    except Exception as e:
-        os.remove(file_location)
-        return {"error": str(e)}
-    os.remove(file_location)
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory="app/templates")
+
+# Include routers
+app.include_router(health_router)
+app.include_router(diagnosis_router)
+
+# Exception handlers
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    """Handle 404 errors"""
+    return templates.TemplateResponse(
+        "404.html",
+        {"request": request, "app_name": settings.app_name},
+        status_code=404
+    )
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc: HTTPException):
+    """Handle 500 errors"""
+    logger.error(f"Internal server error: {str(exc)}")
+    return templates.TemplateResponse(
+        "500.html",
+        {"request": request, "app_name": settings.app_name},
+        status_code=500
+    )
+
+# Routes
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    """Home page"""
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "app_name": settings.app_name,
+            "version": settings.app_version
+        }
+    )
+
+@app.get("/health-check", response_class=HTMLResponse)
+async def health_page(request: Request):
+    """Health check page"""
+    return templates.TemplateResponse(
+        "health.html",
+        {
+            "request": request,
+            "app_name": settings.app_name
+        }
+    )
+
+# API Info endpoint
+@app.get("/api/info")
+async def api_info():
+    """API information endpoint"""
     return {
-        "filename": file.filename,
-        "result": result,
-        "solution": result,  # Use the same result as solution for now
-        "confidence": 95,    # Placeholder confidence
-        "audio": audio_bytes.hex()  # send as hex string for frontend to reconstruct
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "description": "AI-powered medical diagnosis API",
+        "endpoints": {
+            "health": "/health/",
+            "diagnosis": "/api/diagnosis/analyze",
+            "audio": "/api/diagnosis/audio-response",
+            "transcribe": "/api/diagnosis/transcribe"
+        }
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import uvicorn
+    
+    # Check if API key is configured
+    if not settings.groq_api_key:
+        logger.error("GROQ_API_KEY not configured. Please set it in your .env file")
+        exit(1)
+    
+    logger.info(f"Starting server on {settings.host}:{settings.port}")
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        log_level="info"
+    )

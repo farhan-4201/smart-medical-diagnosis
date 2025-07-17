@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check - {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/>
+                        </svg>
+                    </div>
+                    {{ app_name }}
+                </a>
+                <nav>
+                    <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="hero-section">
+                <h1 class="hero-title">System Health Check</h1>
+                <p class="hero-subtitle">Monitor the status of all AI Doctor services</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-0">Service Status</h2>
+                </div>
+                <div class="card-body">
+                    <div id="healthStatus">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span>Checking system health...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health/');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('healthStatus');
+                const isHealthy = data.status === 'healthy';
+                
+                statusElement.innerHTML = `
+                    <div class="mb-6">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-4 h-4 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-yellow-500'}"></div>
+                            <h3 class="text-xl font-semibold">Overall Status: ${data.status.toUpperCase()}</h3>
+                        </div>
+                        <p class="text-gray-600">Version: ${data.version}</p>
+                        <p class="text-gray-600">Last checked: ${new Date(data.timestamp).toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${Object.entries(data.services).map(([service, status]) => `
+                            <div class="p-4 border rounded-lg ${status ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full ${status ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                    <span class="font-medium">${service.replace('_', ' ').toUpperCase()}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">${status ? 'Operational' : 'Unavailable'}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('healthStatus').innerHTML = `
+                    <div class="alert alert-error">
+                        <strong>Health check failed:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Check health on page load
+        checkHealth();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>
